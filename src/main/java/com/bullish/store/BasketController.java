@@ -49,7 +49,7 @@ public class BasketController {
     }
 
     @PutMapping("/basket/{id}")
-    public BasketItem updateBasketItemById(@RequestBody BasketItem newBasketItem, @PathVariable Long id) {
+    public BasketItem updateBasketItemById(@PathVariable Long id, @RequestBody BasketItem newBasketItem) {
         validateProductExists(newBasketItem);
 
         return basketItemRepository.findById(id)
@@ -72,7 +72,7 @@ public class BasketController {
         basketItemRepository.deleteById(id);
     }
 
-    @DeleteMapping("/clearBasket")
+    @DeleteMapping("/clearbasket")
     public void deleteAllBasketItems() {
         basketItemRepository.deleteAll();
     }
@@ -93,14 +93,17 @@ public class BasketController {
             Long quantity = entry.getValue();
 
             Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException());
-            float productPrice = product.getPrice() * quantity;
 
             Optional<Discount> discountOptional = discountRepository.findDiscountByProductId(productId);
-            if (discountOptional.isPresent() && quantity >= discountOptional.get().getQuantity()) {
-                productPrice *= discountOptional.get().getPercentage() / 100;
+            if (discountOptional.isPresent()) {
+                Long discountQuantity = discountOptional.get().getQuantity();
+                Long remainder = quantity % discountQuantity;
+                totalPrice +=
+                        product.getPrice() * remainder +
+                                product.getPrice() * (quantity - remainder) * discountOptional.get().getPercentage() / 100;
+            } else {
+                totalPrice += product.getPrice() * quantity;
             }
-
-            totalPrice += productPrice;
         }
 
         return totalPrice;
@@ -108,7 +111,7 @@ public class BasketController {
 
     private void validateProductExists(BasketItem item) {
         if (!productRepository.existsById(item.getProductId())) {
-            throw new RuntimeException();
+            throw new RuntimeException("Product does not exist");
         }
     }
 }

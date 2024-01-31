@@ -37,14 +37,14 @@ public class DiscountController {
     // curl -X POST http://localhost:8080/discounts -H "Content-type:application/json" -d "{\"productId\": 1, \"quantity\": 2, \"percentage\": 70}"
     @PostMapping("/discounts")
     public Discount addDiscount(@RequestBody Discount newDiscount) {
-        validateProductExists(newDiscount);
+        validateDiscount(newDiscount);
 
         return discountRepository.save(newDiscount);
     }
 
     @PutMapping("/discounts/{id}")
-    public Discount updateDiscountById(@RequestBody Discount newDiscount, @PathVariable Long id) {
-        validateProductExists(newDiscount);
+    public Discount updateDiscountById(@PathVariable Long id, @RequestBody Discount newDiscount) {
+        validateDiscount(newDiscount);
 
         return discountRepository.findById(id)
                 .map(discount -> {
@@ -68,9 +68,15 @@ public class DiscountController {
         discountRepository.deleteById(id);
     }
 
-    private void validateProductExists(Discount discount) {
+    private void validateDiscount(Discount discount) {
         if (!productRepository.existsById(discount.getProductId())) {
-            throw new RuntimeException();
+            throw new RuntimeException("Product does not exist");
+        }
+        if (discount.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be a positive integer");
+        }
+        if (discount.getPercentage() <= 0 || discount.getPercentage() > 100) {
+            throw new IllegalArgumentException("Percentage must be between 0 and 100");
         }
     }
 }
